@@ -10,3 +10,6 @@ require __DIR__.'/../app/Modules/Projects/Routes/api.php';
 
 // Destinations Module Routes
 require __DIR__.'/../app/Modules/Destinations/Routes/api.php';
+
+// Videos Module Routes
+require __DIR__.'/../app/Modules/Videos/Routes/api.php';
