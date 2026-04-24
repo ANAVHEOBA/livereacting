@@ -15,6 +15,7 @@ class LiveStreamResource extends JsonResource
             'status' => $this->status,
             'format' => $this->format,
             'duration' => $this->duration,
+            'metadata' => $this->metadata,
             'started_at' => $this->started_at,
             'ended_at' => $this->ended_at,
             'created_at' => $this->created_at,

@@ -22,6 +22,7 @@ class Project extends Model
         'status',
         'auto_sync',
         'active_live_id',
+        'active_scene_id',
     ];
 
     protected $casts = [
@@ -46,11 +47,21 @@ class Project extends Model
         return $this->hasMany(LiveStream::class);
     }
 
+    public function scenes(): HasMany
+    {
+        return $this->hasMany(Scene::class)->orderBy('sort_order');
+    }
+
     public function activeLiveStream(): HasOne
     {
         return $this->hasOne(LiveStream::class)
             ->whereIn('status', ['preparing', 'live'])
             ->latest();
+    }
+
+    public function activeScene(): BelongsTo
+    {
+        return $this->belongsTo(Scene::class, 'active_scene_id');
     }
 
     public function schedules(): HasMany
@@ -105,5 +116,10 @@ class Project extends Model
     public function hasActiveSchedules(): bool
     {
         return $this->activeSchedules()->exists();
+    }
+
+    public function hasScenes(): bool
+    {
+        return $this->scenes()->exists();
     }
 }

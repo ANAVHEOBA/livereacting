@@ -65,9 +65,27 @@ class ProjectController extends Controller
             return $this->error('Project not found', 404);
         }
 
-        // Load destinations if requested
-        if ($request->query('include') === 'destinations') {
-            $project->load('destinations');
+        $includes = collect(explode(',', (string) $request->query('include')))
+            ->map(fn (string $include) => trim($include))
+            ->filter()
+            ->values();
+
+        $relations = [];
+
+        if ($includes->contains('destinations')) {
+            $relations[] = 'destinations';
+        }
+
+        if ($includes->contains('scenes')) {
+            $relations[] = 'scenes.layers.file';
+        }
+
+        if ($includes->contains('activeScene')) {
+            $relations[] = 'activeScene.layers.file';
+        }
+
+        if (!empty($relations)) {
+            $project->load($relations);
         }
 
         return $this->success(new ProjectResource($project));

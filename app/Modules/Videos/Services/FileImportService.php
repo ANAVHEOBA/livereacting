@@ -19,13 +19,14 @@ class FileImportService
     {
         $folderId = $this->resolveFolderId($userId, $data['folder_id'] ?? null);
         $fileSource = $this->normalizeFileSource($data['source']);
+        $fileType = $data['type'] ?? 'video';
 
         // Create import record
         $import = $this->importRepository->create([
             'user_id' => $userId,
             'source' => $data['source'],
             'source_url' => $data['source_url'],
-            'type' => 'video',
+            'type' => $fileType,
             'status' => 'pending',
             'progress' => 0,
         ]);
@@ -35,7 +36,7 @@ class FileImportService
             'user_id' => $userId,
             'folder_id' => $folderId,
             'name' => $data['name'] ?? $this->extractFileName($data['source_url']),
-            'type' => 'video',
+            'type' => $fileType,
             'source' => $fileSource,
             'source_url' => $data['source_url'],
             'storage_path' => null,
@@ -58,11 +59,14 @@ class FileImportService
         $import->progress = 100;
         $import->save();
 
-        $file->storage_path = 'videos/' . $file->id . '.mp4';
-        $file->size_bytes = 10485760; // 10MB simulated
-        $file->duration_seconds = 120;
-        $file->resolution = '1920x1080';
-        $file->format = 'mp4';
+        $metadata = $this->simulatedAssetMetadata($fileType, $file->id);
+
+        $file->storage_path = $metadata['storage_path'];
+        $file->size_bytes = $metadata['size_bytes'];
+        $file->duration_seconds = $metadata['duration_seconds'];
+        $file->resolution = $metadata['resolution'];
+        $file->format = $metadata['format'];
+        $file->codec = $metadata['codec'];
         $file->status = 'ready';
         $file->save();
 
@@ -130,5 +134,35 @@ class FileImportService
         }
 
         return $folder->id;
+    }
+
+    protected function simulatedAssetMetadata(string $fileType, int $fileId): array
+    {
+        return match ($fileType) {
+            'audio' => [
+                'storage_path' => 'audio/' . $fileId . '.mp3',
+                'size_bytes' => 5242880,
+                'duration_seconds' => 180,
+                'resolution' => null,
+                'format' => 'mp3',
+                'codec' => 'aac',
+            ],
+            'image' => [
+                'storage_path' => 'images/' . $fileId . '.png',
+                'size_bytes' => 2097152,
+                'duration_seconds' => null,
+                'resolution' => '1920x1080',
+                'format' => 'png',
+                'codec' => null,
+            ],
+            default => [
+                'storage_path' => 'videos/' . $fileId . '.mp4',
+                'size_bytes' => 10485760,
+                'duration_seconds' => 120,
+                'resolution' => '1920x1080',
+                'format' => 'mp4',
+                'codec' => 'h264',
+            ],
+        };
     }
 }

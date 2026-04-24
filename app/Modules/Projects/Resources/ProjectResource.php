@@ -18,6 +18,21 @@ class ProjectResource extends JsonResource
             'status' => $this->status,
             'auto_sync' => $this->auto_sync,
             'active_live_id' => $this->active_live_id,
+            'active_scene_id' => $this->active_scene_id,
+            'active_scene' => $this->whenLoaded('activeScene', function () {
+                if ($this->activeScene) {
+                    $this->activeScene->setRelation('project', $this->resource);
+                }
+
+                return new SceneResource($this->activeScene);
+            }),
+            'scenes' => $this->whenLoaded('scenes', function () {
+                $this->scenes->each(function ($scene) {
+                    $scene->setRelation('project', $this->resource);
+                });
+
+                return SceneResource::collection($this->scenes);
+            }),
             'destinations' => $this->whenLoaded('destinations', function () {
                 return DestinationResource::collection($this->destinations);
             }),

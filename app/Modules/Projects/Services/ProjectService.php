@@ -5,36 +5,42 @@ namespace App\Modules\Projects\Services;
 use App\Models\Project;
 use App\Modules\Projects\Repositories\ProjectRepository;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class ProjectService
 {
     public function __construct(
         protected ProjectRepository $projectRepository,
-        protected HistoryService $historyService
+        protected HistoryService $historyService,
+        protected SceneService $sceneService
     ) {}
 
     public function createProject(int $userId, array $data): Project
     {
-        $project = $this->projectRepository->create([
-            'user_id' => $userId,
-            'name' => $data['name'],
-            'description' => $data['description'] ?? null,
-            'thumbnail' => $data['thumbnail'] ?? null,
-            'auto_sync' => $data['auto_sync'] ?? false,
-            'status' => 'draft',
-        ]);
+        return DB::transaction(function () use ($userId, $data) {
+            $project = $this->projectRepository->create([
+                'user_id' => $userId,
+                'name' => $data['name'],
+                'description' => $data['description'] ?? null,
+                'thumbnail' => $data['thumbnail'] ?? null,
+                'auto_sync' => $data['auto_sync'] ?? false,
+                'status' => 'draft',
+            ]);
 
-        $this->historyService->logAction(
-            $project,
-            'project_created',
-            'Project created',
-            [
-                'name' => $project->name,
-                'auto_sync' => $project->auto_sync,
-            ]
-        );
+            $this->historyService->logAction(
+                $project,
+                'project_created',
+                'Project created',
+                [
+                    'name' => $project->name,
+                    'auto_sync' => $project->auto_sync,
+                ]
+            );
 
-        return $project;
+            $this->sceneService->createDefaultScene($project);
+
+            return $project->fresh(['activeScene', 'scenes']);
+        });
     }
 
     public function updateProject(Project $project, array $data): Project

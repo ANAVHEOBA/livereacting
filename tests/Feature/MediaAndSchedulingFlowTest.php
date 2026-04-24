@@ -64,6 +64,16 @@ test('scheduled streams can be processed into live streams', function () {
         'description' => 'Weekly scheduled stream',
     ])->assertCreated()->json('data.id');
 
+    $project = $this->getJson("/api/projects/{$projectId}?include=activeScene")
+        ->assertOk();
+
+    $activeSceneId = $project->json('data.active_scene.id');
+
+    $this->postJson("/api/projects/{$projectId}/scenes/{$activeSceneId}/layers", [
+        'type' => 'text',
+        'content' => 'Going live shortly',
+    ])->assertCreated();
+
     $this->postJson("/api/projects/{$projectId}/destinations", [
         'destination_id' => $destinationId,
     ])->assertCreated();
@@ -90,4 +100,6 @@ test('scheduled streams can be processed into live streams', function () {
     $this->getJson("/api/projects/{$projectId}/schedules")
         ->assertOk()
         ->assertJsonPath('data.schedules.0.status', 'started');
+
+    $this->travelBack();
 });

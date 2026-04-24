@@ -12,7 +12,8 @@ class LiveStreamService
     public function __construct(
         protected LiveStreamRepository $liveStreamRepository,
         protected ProjectRepository $projectRepository,
-        protected HistoryService $historyService
+        protected HistoryService $historyService,
+        protected StudioPayloadService $studioPayloadService
     ) {}
 
     public function validateProject(Project $project): array
@@ -39,6 +40,12 @@ class LiveStreamService
             $errors[] = 'Project already has an active or preparing stream';
         }
 
+        $studioValidation = $this->studioPayloadService->validateProjectStudio($project);
+
+        if (!$studioValidation['valid']) {
+            $errors = array_merge($errors, $studioValidation['errors']);
+        }
+
         return [
             'valid' => empty($errors),
             'errors' => $errors,
@@ -53,6 +60,8 @@ class LiveStreamService
             throw new \Exception(implode(', ', $validation['errors']));
         }
 
+        $studioPayload = $this->studioPayloadService->buildStudioPayload($project);
+
         // Create live stream
         $liveStream = $this->liveStreamRepository->create([
             'project_id' => $project->id,
@@ -60,6 +69,12 @@ class LiveStreamService
             'status' => 'preparing',
             'format' => $data['format'] ?? '720p',
             'duration' => $data['duration'] ?? null,
+            'metadata' => [
+                'started_from_scene_id' => $project->active_scene_id,
+                'studio_snapshot' => $studioPayload,
+                'sync_count' => 0,
+                'last_synced_at' => null,
+            ],
         ]);
 
         // Update project status and active_live_id
@@ -83,6 +98,9 @@ class LiveStreamService
                 'live_stream_id' => $liveStream->id,
                 'format' => $liveStream->format,
                 'duration' => $liveStream->duration,
+                'active_scene_id' => $project->active_scene_id,
+                'scene_count' => $studioPayload['scene_count'],
+                'layer_count' => $studioPayload['layer_count'],
             ]
         );
 

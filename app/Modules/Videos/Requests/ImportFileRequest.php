@@ -16,6 +16,7 @@ class ImportFileRequest extends FormRequest
         return [
             'source' => ['required', 'string', 'in:google_drive,dropbox,youtube,url,upload'],
             'source_url' => ['required', 'string', 'url'],
+            'type' => ['nullable', 'string', 'in:video,audio,image'],
             'folder_id' => ['nullable', 'integer', 'exists:folders,id'],
             'name' => ['nullable', 'string', 'max:255'],
         ];
