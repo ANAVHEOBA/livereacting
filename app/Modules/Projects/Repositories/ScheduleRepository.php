@@ -3,6 +3,7 @@
 namespace App\Modules\Projects\Repositories;
 
 use App\Models\ProjectSchedule;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 
 class ScheduleRepository
@@ -37,37 +38,51 @@ class ScheduleRepository
             ->get();
     }
 
-    public function hasConflict(int $projectId, \Carbon\Carbon $startAt, ?int $duration): bool
+    public function getDueSchedules(): Collection
     {
-        $query = ProjectSchedule::where('project_id', $projectId)
-            ->where('status', 'scheduled');
+        return ProjectSchedule::with('project.destinations')
+            ->where('status', 'scheduled')
+            ->where('start_at', '<=', now())
+            ->orderBy('start_at')
+            ->get();
+    }
 
-        if ($duration) {
-            // Check if new schedule overlaps with existing schedules
-            $endAt = $startAt->copy()->addSeconds($duration);
-            
-            $query->where(function ($q) use ($startAt, $endAt) {
-                // New schedule starts during existing schedule
-                $q->where(function ($subQ) use ($startAt) {
-                    $subQ->where('start_at', '<=', $startAt)
-                        ->whereRaw('DATE_ADD(start_at, INTERVAL duration SECOND) > ?', [$startAt]);
-                })
-                // New schedule ends during existing schedule
-                ->orWhere(function ($subQ) use ($endAt) {
-                    $subQ->where('start_at', '<', $endAt)
-                        ->whereRaw('DATE_ADD(start_at, INTERVAL duration SECOND) >= ?', [$endAt]);
-                })
-                // New schedule completely contains existing schedule
-                ->orWhere(function ($subQ) use ($startAt, $endAt) {
-                    $subQ->where('start_at', '>=', $startAt)
-                        ->whereRaw('DATE_ADD(start_at, INTERVAL duration SECOND) <= ?', [$endAt]);
-                });
-            });
-        } else {
-            // If no duration, just check if there's any schedule at the same time
-            $query->where('start_at', $startAt);
+    public function hasConflict(int $projectId, Carbon $startAt, ?int $duration): bool
+    {
+        $schedules = ProjectSchedule::where('project_id', $projectId)
+            ->where('status', 'scheduled')
+            ->orderBy('start_at')
+            ->get();
+
+        foreach ($schedules as $schedule) {
+            if ($this->schedulesOverlap($schedule, $startAt, $duration)) {
+                return true;
+            }
         }
 
-        return $query->exists();
+        return false;
+    }
+
+    protected function schedulesOverlap(ProjectSchedule $schedule, Carbon $startAt, ?int $duration): bool
+    {
+        $existingStart = $schedule->start_at->copy();
+        $existingEnd = $schedule->duration
+            ? $schedule->start_at->copy()->addSeconds($schedule->duration)
+            : null;
+        $newEnd = $duration ? $startAt->copy()->addSeconds($duration) : null;
+
+        if ($existingEnd === null && $newEnd === null) {
+            return true;
+        }
+
+        if ($existingEnd === null) {
+            return $existingStart->lessThanOrEqualTo($startAt);
+        }
+
+        if ($newEnd === null) {
+            return $startAt->lessThan($existingEnd);
+        }
+
+        return $existingStart->lessThan($newEnd) && $startAt->lessThan($existingEnd);
     }
 }

@@ -22,15 +22,26 @@ class FolderRepository
         return Folder::where('id', $id)->where('user_id', $userId)->first();
     }
 
-    public function getAllByUser(int $userId, ?string $type = null): Collection
+    public function getAllByUser(int $userId, array $filters = []): Collection
     {
         $query = Folder::where('user_id', $userId);
 
-        if ($type) {
-            $query->where('type', $type);
+        if (array_key_exists('type', $filters) && $filters['type']) {
+            $query->where('type', $filters['type']);
         }
 
-        return $query->orderBy('name')->get();
+        if (array_key_exists('parent_id', $filters)) {
+            if ($filters['parent_id'] === null) {
+                $query->whereNull('parent_id');
+            } else {
+                $query->where('parent_id', $filters['parent_id']);
+            }
+        }
+
+        return $query
+            ->withCount('files')
+            ->orderBy('name')
+            ->get();
     }
 
     public function delete(Folder $folder): bool

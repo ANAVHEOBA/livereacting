@@ -17,6 +17,7 @@ class DestinationResource extends JsonResource
             'is_valid' => $this->is_valid,
             'needs_reconnection' => $this->needsReconnection(),
             'rtmp_url' => $this->type === 'rtmp' ? $this->rtmp_url : null,
+            'token_expires_at' => $this->token_expires_at,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

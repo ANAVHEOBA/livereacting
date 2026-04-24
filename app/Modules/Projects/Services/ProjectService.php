@@ -9,12 +9,13 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class ProjectService
 {
     public function __construct(
-        protected ProjectRepository $projectRepository
+        protected ProjectRepository $projectRepository,
+        protected HistoryService $historyService
     ) {}
 
     public function createProject(int $userId, array $data): Project
     {
-        return $this->projectRepository->create([
+        $project = $this->projectRepository->create([
             'user_id' => $userId,
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
@@ -22,6 +23,18 @@ class ProjectService
             'auto_sync' => $data['auto_sync'] ?? false,
             'status' => 'draft',
         ]);
+
+        $this->historyService->logAction(
+            $project,
+            'project_created',
+            'Project created',
+            [
+                'name' => $project->name,
+                'auto_sync' => $project->auto_sync,
+            ]
+        );
+
+        return $project;
     }
 
     public function updateProject(Project $project, array $data): Project
@@ -37,7 +50,18 @@ class ProjectService
             'auto_sync' => $data['auto_sync'] ?? $project->auto_sync,
         ]);
 
-        return $project->fresh();
+        $updatedProject = $project->fresh();
+
+        $this->historyService->logAction(
+            $updatedProject,
+            'project_updated',
+            'Project updated',
+            [
+                'fields' => array_keys($data),
+            ]
+        );
+
+        return $updatedProject;
     }
 
     public function deleteProject(Project $project): bool
@@ -45,6 +69,12 @@ class ProjectService
         if (!$project->canBeDeleted()) {
             throw new \Exception('Cannot delete project while it is live or scheduled');
         }
+
+        $this->historyService->logAction(
+            $project,
+            'project_deleted',
+            'Project deleted'
+        );
 
         return $this->projectRepository->delete($project);
     }

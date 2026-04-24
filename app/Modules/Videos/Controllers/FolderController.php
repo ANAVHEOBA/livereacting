@@ -20,11 +20,12 @@ class FolderController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $parentId = $request->query('parent_id');
-
         $folders = $this->folderService->getUserFolders(
             $request->user()->id,
-            $parentId
+            [
+                'parent_id' => $request->query('parent_id'),
+                'type' => $request->query('type'),
+            ]
         );
 
         return $this->success([

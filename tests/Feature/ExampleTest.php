@@ -1,7 +1,5 @@
 <?php
 
-test('returns a successful response', function () {
-    $response = $this->get(route('home'));
-
-    $response->assertOk();
+test('health check endpoint is available', function () {
+    $this->get('/up')->assertOk();
 });

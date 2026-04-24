@@ -38,6 +38,10 @@ class FileRepository
             $query->where('status', $filters['status']);
         }
 
+        if (isset($filters['search'])) {
+            $query->where('name', 'like', '%' . $filters['search'] . '%');
+        }
+
         return $query->orderBy('created_at', 'desc')->paginate($perPage);
     }
 

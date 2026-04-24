@@ -22,6 +22,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/projects/{id}/live', [\App\Modules\Projects\Controllers\LiveStreamController::class, 'stop']);
 
     // Scheduling
+    Route::get('/projects/{id}/schedules', [\App\Modules\Projects\Controllers\ScheduleController::class, 'index']);
     Route::post('/projects/{id}/schedule', [\App\Modules\Projects\Controllers\ScheduleController::class, 'store']);
     Route::delete('/projects/{id}/schedules', [\App\Modules\Projects\Controllers\ScheduleController::class, 'destroy']);
 

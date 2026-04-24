@@ -12,7 +12,8 @@ class ScheduleService
     public function __construct(
         protected ScheduleRepository $scheduleRepository,
         protected ProjectRepository $projectRepository,
-        protected LiveStreamService $liveStreamService
+        protected LiveStreamService $liveStreamService,
+        protected HistoryService $historyService
     ) {}
 
     public function scheduleStream(Project $project, array $data): ProjectSchedule
@@ -55,7 +56,19 @@ class ScheduleService
             'status' => 'scheduled',
         ]);
 
-        return $schedule;
+        $this->historyService->logAction(
+            $project,
+            'stream_scheduled',
+            'Stream scheduled',
+            [
+                'schedule_id' => $schedule->id,
+                'start_at' => $schedule->start_at,
+                'format' => $schedule->format,
+                'duration' => $schedule->duration,
+            ]
+        );
+
+        return $schedule->fresh();
     }
 
     public function cancelSchedules(Project $project): int
@@ -76,7 +89,20 @@ class ScheduleService
             }
         }
 
+        if ($count > 0) {
+            $this->historyService->logAction(
+                $project,
+                'schedules_cancelled',
+                'Scheduled streams cancelled',
+                [
+                    'cancelled_count' => $count,
+                ]
+            );
+        }
+
         // Update project status back to draft if no more active schedules
+        $project = $project->fresh();
+
         if (!$project->hasActiveSchedules() && !$project->hasActiveLiveStream()) {
             $this->projectRepository->update($project, [
                 'status' => 'draft',
@@ -89,5 +115,60 @@ class ScheduleService
     public function getProjectSchedules(Project $project)
     {
         return $this->scheduleRepository->getByProject($project->id);
+    }
+
+    public function processDueSchedules(): array
+    {
+        $started = 0;
+        $failed = 0;
+
+        foreach ($this->scheduleRepository->getDueSchedules() as $schedule) {
+            $project = $schedule->project;
+
+            try {
+                $liveStream = $this->liveStreamService->startLiveStream($project, [
+                    'format' => $schedule->format,
+                    'duration' => $schedule->duration,
+                ]);
+
+                $this->scheduleRepository->update($schedule, [
+                    'status' => 'started',
+                ]);
+
+                $this->historyService->logAction(
+                    $project,
+                    'scheduled_stream_started',
+                    'Scheduled stream started',
+                    [
+                        'schedule_id' => $schedule->id,
+                        'live_stream_id' => $liveStream->id,
+                    ]
+                );
+
+                $started++;
+            } catch (\Throwable $e) {
+                $this->scheduleRepository->update($schedule, [
+                    'status' => 'failed',
+                    'error_message' => $e->getMessage(),
+                ]);
+
+                $this->historyService->logAction(
+                    $project,
+                    'scheduled_stream_failed',
+                    'Scheduled stream failed to start',
+                    [
+                        'schedule_id' => $schedule->id,
+                        'error' => $e->getMessage(),
+                    ]
+                );
+
+                $failed++;
+            }
+        }
+
+        return [
+            'started' => $started,
+            'failed' => $failed,
+        ];
     }
 }

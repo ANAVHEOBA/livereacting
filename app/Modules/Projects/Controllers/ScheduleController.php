@@ -20,6 +20,22 @@ class ScheduleController extends Controller
         protected ScheduleService $scheduleService
     ) {}
 
+    public function index(Request $request, int $projectId): JsonResponse
+    {
+        $project = $this->projectService->getProject($projectId, $request->user()->id);
+
+        if (!$project) {
+            return $this->error('Project not found', 404);
+        }
+
+        $schedules = $this->scheduleService->getProjectSchedules($project);
+
+        return $this->success([
+            'schedules' => ScheduleResource::collection($schedules),
+            'total' => $schedules->count(),
+        ]);
+    }
+
     public function store(ScheduleStreamRequest $request, int $projectId): JsonResponse
     {
         $project = $this->projectService->getProject($projectId, $request->user()->id);

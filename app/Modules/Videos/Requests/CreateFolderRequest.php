@@ -16,6 +16,7 @@ class CreateFolderRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'parent_id' => ['nullable', 'integer', 'exists:folders,id'],
+            'type' => ['nullable', 'in:video,audio,image'],
         ];
     }
 }

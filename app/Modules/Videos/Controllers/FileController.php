@@ -23,6 +23,8 @@ class FileController extends Controller
         $filters = [
             'folder_id' => $request->query('folder_id'),
             'search' => $request->query('search'),
+            'type' => $request->query('type'),
+            'status' => $request->query('status'),
         ];
 
         $perPage = $request->query('per_page', 20);

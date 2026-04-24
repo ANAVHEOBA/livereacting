@@ -11,7 +11,7 @@ class FileImport extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'file_id', 'source_url', 'type',
+        'user_id', 'file_id', 'source', 'source_url', 'type',
         'status', 'progress', 'error_message'
     ];
 

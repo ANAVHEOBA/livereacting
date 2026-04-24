@@ -18,7 +18,10 @@ class FileImportRepository
 
     public function findByIdAndUser(int $id, int $userId): ?FileImport
     {
-        return FileImport::where('id', $id)->where('user_id', $userId)->first();
+        return FileImport::with('file')
+            ->where('id', $id)
+            ->where('user_id', $userId)
+            ->first();
     }
 
     public function update(FileImport $import, array $data): bool

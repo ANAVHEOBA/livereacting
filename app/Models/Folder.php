@@ -11,7 +11,7 @@ class Folder extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'name', 'type'];
+    protected $fillable = ['user_id', 'name', 'type', 'parent_id'];
 
     protected $casts = [
         'created_at' => 'datetime',
@@ -23,8 +23,18 @@ class Folder extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
     public function files(): HasMany
     {
         return $this->hasMany(File::class);
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id');
     }
 }

@@ -12,6 +12,7 @@ class FolderResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'type' => $this->type,
             'parent_id' => $this->parent_id,
             'files_count' => $this->whenCounted('files'),
             'created_at' => $this->created_at,
