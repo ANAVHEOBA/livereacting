@@ -4,11 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Project extends Model
 {
@@ -81,6 +81,21 @@ class Project extends Model
         return $this->hasMany(ProjectHistory::class);
     }
 
+    public function interactiveElements(): HasMany
+    {
+        return $this->hasMany(InteractiveElement::class)->orderBy('sort_order');
+    }
+
+    public function guestRoom(): HasOne
+    {
+        return $this->hasOne(GuestRoom::class);
+    }
+
+    public function playlists(): HasMany
+    {
+        return $this->hasMany(Playlist::class);
+    }
+
     public function isLive(): bool
     {
         return $this->status === 'live';
@@ -93,12 +108,12 @@ class Project extends Model
 
     public function canBeDeleted(): bool
     {
-        return !in_array($this->status, ['live', 'scheduled']);
+        return ! in_array($this->status, ['live', 'scheduled']);
     }
 
     public function canBeUpdated(): bool
     {
-        return !$this->isLive();
+        return ! $this->isLive();
     }
 
     public function hasActiveLiveStream(): bool

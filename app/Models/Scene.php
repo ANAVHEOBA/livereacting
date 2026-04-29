@@ -41,4 +41,9 @@ class Scene extends Model
     {
         return $this->hasMany(SceneLayer::class)->orderBy('sort_order');
     }
+
+    public function interactiveElements(): HasMany
+    {
+        return $this->hasMany(InteractiveElement::class)->orderBy('sort_order');
+    }
 }

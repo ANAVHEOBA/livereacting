@@ -5,7 +5,151 @@
 
 @theme inline {
     --font-sans:
-        Instrument Sans, ui-sans-serif, system-ui, sans-serif,
+        'Space Grotesk', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
+    --color-ink: #09111b;
+    --color-paper: #f5efe4;
+    --color-signal: #ff7a1a;
+    --color-signal-soft: #ffb36a;
+    --color-aurora: #1cc6a0;
+}
+
+@layer base {
+    body {
+        background:
+            radial-gradient(
+                circle at top left,
+                rgba(255, 122, 26, 0.1),
+                transparent 28rem
+            ),
+            linear-gradient(180deg, #09111b 0%, #050a11 100%);
+        color: var(--color-paper);
+    }
+}
+
+@layer components {
+    .hero-orb {
+        position: absolute;
+        height: 24rem;
+        width: 24rem;
+        border-radius: 9999px;
+        background: radial-gradient(
+            circle at 30% 30%,
+            rgba(255, 122, 26, 0.7),
+            rgba(255, 122, 26, 0.06) 55%,
+            transparent 75%
+        );
+        filter: blur(30px);
+        opacity: 0.8;
+    }
+
+    .hero-orb-secondary {
+        background: radial-gradient(
+            circle at 30% 30%,
+            rgba(28, 198, 160, 0.55),
+            rgba(28, 198, 160, 0.04) 55%,
+            transparent 75%
+        );
+    }
+
+    .hero-grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+            linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+            linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0.04) 1px,
+                transparent 1px
+            );
+        background-size: 4.5rem 4.5rem;
+        mask-image: linear-gradient(
+            180deg,
+            rgba(0, 0, 0, 0.9),
+            transparent 88%
+        );
+        opacity: 0.35;
+    }
+
+    .glass-panel {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background:
+            linear-gradient(
+                180deg,
+                rgba(255, 255, 255, 0.12),
+                rgba(255, 255, 255, 0.04)
+            ),
+            rgba(8, 13, 22, 0.82);
+        box-shadow:
+            0 24px 60px rgba(0, 0, 0, 0.32),
+            inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        backdrop-filter: blur(18px);
+        border-radius: 2rem;
+    }
+
+    .panel-label {
+        font-size: 0.72rem;
+        line-height: 1rem;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.48);
+    }
+
+    .studio-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.06);
+        padding: 0.55rem 0.85rem;
+        font-size: 0.72rem;
+        line-height: 1rem;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.68);
+    }
+
+    .studio-kicker::before {
+        content: '';
+        height: 0.55rem;
+        width: 0.55rem;
+        border-radius: 9999px;
+        background: var(--color-aurora);
+        box-shadow: 0 0 18px rgba(28, 198, 160, 0.8);
+    }
+
+    .panel-stack {
+        position: relative;
+        overflow: hidden;
+        border-radius: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+        padding: 1.25rem;
+    }
+
+    .panel-stack h3 {
+        margin-top: 2.75rem;
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: white;
+    }
+
+    .panel-stack p {
+        margin-top: 0.8rem;
+        font-size: 0.95rem;
+        line-height: 1.7;
+        color: rgba(255, 255, 255, 0.64);
+    }
+
+    .stack-index {
+        position: absolute;
+        left: 1.25rem;
+        top: 1.15rem;
+        font-size: 0.8rem;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--color-signal-soft);
+    }
 }

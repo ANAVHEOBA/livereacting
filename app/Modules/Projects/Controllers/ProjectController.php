@@ -61,7 +61,7 @@ class ProjectController extends Controller
     {
         $project = $this->projectService->getProject($id, $request->user()->id);
 
-        if (!$project) {
+        if (! $project) {
             return $this->error('Project not found', 404);
         }
 
@@ -84,7 +84,16 @@ class ProjectController extends Controller
             $relations[] = 'activeScene.layers.file';
         }
 
-        if (!empty($relations)) {
+        if ($includes->contains('interactiveElements')) {
+            $relations[] = 'interactiveElements.responses';
+        }
+
+        if ($includes->contains('guestRoom')) {
+            $relations[] = 'guestRoom.invites';
+            $relations[] = 'guestRoom.sessions';
+        }
+
+        if (! empty($relations)) {
             $project->load($relations);
         }
 
@@ -95,7 +104,7 @@ class ProjectController extends Controller
     {
         $project = $this->projectService->getProject($id, $request->user()->id);
 
-        if (!$project) {
+        if (! $project) {
             return $this->error('Project not found', 404);
         }
 
@@ -115,7 +124,7 @@ class ProjectController extends Controller
     {
         $project = $this->projectService->getProject($id, $request->user()->id);
 
-        if (!$project) {
+        if (! $project) {
             return $this->error('Project not found', 404);
         }
 

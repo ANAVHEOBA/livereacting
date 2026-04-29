@@ -4,6 +4,7 @@ namespace App\Modules\Projects\Services;
 
 use App\Models\Project;
 use App\Models\Scene;
+use App\Modules\Billing\Services\BillingService;
 use App\Modules\Projects\Repositories\ProjectRepository;
 use App\Modules\Projects\Repositories\SceneRepository;
 use Illuminate\Database\Eloquent\Collection;
@@ -14,7 +15,8 @@ class SceneService
     public function __construct(
         protected SceneRepository $sceneRepository,
         protected ProjectRepository $projectRepository,
-        protected HistoryService $historyService
+        protected HistoryService $historyService,
+        protected BillingService $billingService
     ) {}
 
     public function createDefaultScene(Project $project): Scene
@@ -63,6 +65,12 @@ class SceneService
 
     public function createScene(Project $project, array $data): Scene
     {
+        $plan = $this->billingService->getLimitsForUser($project->user);
+
+        if ($project->scenes()->count() >= $plan->max_scenes) {
+            throw new \Exception("Scene limit reached for your {$plan->name} plan");
+        }
+
         return DB::transaction(function () use ($project, $data) {
             $scene = $this->sceneRepository->create([
                 'project_id' => $project->id,
@@ -74,7 +82,7 @@ class SceneService
                 'settings' => $data['settings'] ?? [],
             ]);
 
-            if (!$project->active_scene_id) {
+            if (! $project->active_scene_id) {
                 $this->projectRepository->update($project, [
                     'active_scene_id' => $scene->id,
                 ]);

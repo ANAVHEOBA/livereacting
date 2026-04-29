@@ -20,7 +20,9 @@ class FileResource extends JsonResource
             'duration_seconds' => $this->duration_seconds,
             'resolution' => $this->resolution,
             'format' => $this->format,
+            'codec' => $this->codec,
             'status' => $this->status,
+            'metadata' => $this->metadata ?? [],
             'folder_id' => $this->folder_id,
             'folder' => $this->whenLoaded('folder', function () {
                 return new FolderResource($this->folder);

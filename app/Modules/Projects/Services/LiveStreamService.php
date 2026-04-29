@@ -4,6 +4,7 @@ namespace App\Modules\Projects\Services;
 
 use App\Models\LiveStream;
 use App\Models\Project;
+use App\Modules\Billing\Services\BillingService;
 use App\Modules\Projects\Repositories\LiveStreamRepository;
 use App\Modules\Projects\Repositories\ProjectRepository;
 
@@ -13,7 +14,8 @@ class LiveStreamService
         protected LiveStreamRepository $liveStreamRepository,
         protected ProjectRepository $projectRepository,
         protected HistoryService $historyService,
-        protected StudioPayloadService $studioPayloadService
+        protected StudioPayloadService $studioPayloadService,
+        protected BillingService $billingService
     ) {}
 
     public function validateProject(Project $project): array
@@ -21,7 +23,7 @@ class LiveStreamService
         $errors = [];
 
         // Check if project has destinations
-        if (!$project->destinations()->exists()) {
+        if (! $project->destinations()->exists()) {
             $errors[] = 'Project has no streaming destinations';
         }
 
@@ -31,7 +33,7 @@ class LiveStreamService
             ->get();
 
         if ($invalidDestinations->isNotEmpty()) {
-            $errors[] = 'Some destinations have invalid or expired tokens: ' . 
+            $errors[] = 'Some destinations have invalid or expired tokens: '.
                 $invalidDestinations->pluck('name')->join(', ');
         }
 
@@ -42,8 +44,14 @@ class LiveStreamService
 
         $studioValidation = $this->studioPayloadService->validateProjectStudio($project);
 
-        if (!$studioValidation['valid']) {
+        if (! $studioValidation['valid']) {
             $errors = array_merge($errors, $studioValidation['errors']);
+        }
+
+        try {
+            $this->billingService->assertProjectCanGoLive($project->loadMissing('user'), $project->activeLiveStream?->duration);
+        } catch (\Exception $e) {
+            $errors[] = $e->getMessage();
         }
 
         return [
@@ -56,11 +64,12 @@ class LiveStreamService
     {
         // Validate project
         $validation = $this->validateProject($project);
-        if (!$validation['valid']) {
+        if (! $validation['valid']) {
             throw new \Exception(implode(', ', $validation['errors']));
         }
 
         $studioPayload = $this->studioPayloadService->buildStudioPayload($project);
+        $this->billingService->assertProjectCanGoLive($project->loadMissing('user'), $data['duration'] ?? null);
 
         // Create live stream
         $liveStream = $this->liveStreamRepository->create([
@@ -104,6 +113,15 @@ class LiveStreamService
             ]
         );
 
+        $this->billingService->consumeCredits(
+            $project->user,
+            10,
+            'Live stream started',
+            'live_stream',
+            $liveStream->id,
+            ['format' => $liveStream->format]
+        );
+
         return $liveStream->fresh();
     }
 
@@ -111,11 +129,11 @@ class LiveStreamService
     {
         $liveStream = $this->liveStreamRepository->findActiveByProject($project->id);
 
-        if (!$liveStream) {
+        if (! $liveStream) {
             throw new \Exception('No active live stream found for this project');
         }
 
-        if (!$liveStream->canBeStopped()) {
+        if (! $liveStream->canBeStopped()) {
             throw new \Exception('Live stream cannot be stopped in current state');
         }
 
@@ -138,8 +156,8 @@ class LiveStreamService
             'Live stream stopped',
             [
                 'live_stream_id' => $liveStream->id,
-                'duration_seconds' => $liveStream->started_at 
-                    ? now()->diffInSeconds($liveStream->started_at) 
+                'duration_seconds' => $liveStream->started_at
+                    ? now()->diffInSeconds($liveStream->started_at)
                     : null,
             ]
         );

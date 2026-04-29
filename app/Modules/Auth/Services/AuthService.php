@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Modules\Auth\Repositories\UserRepository;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 
 class AuthService
 {
@@ -29,14 +28,13 @@ class AuthService
 
     public function login(array $credentials): ?array
     {
-        if (!Auth::attempt($credentials)) {
+        $user = $this->userRepository->findByEmail($credentials['email']);
+
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return null;
         }
 
-        $user = Auth::user();
-
-        if (!$user->hasVerifiedEmail()) {
-            Auth::logout();
+        if (! $user->hasVerifiedEmail()) {
             return null;
         }
 

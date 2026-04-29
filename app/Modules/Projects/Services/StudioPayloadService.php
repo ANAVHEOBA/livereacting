@@ -17,7 +17,7 @@ class StudioPayloadService
             $errors[] = 'Project has no scenes';
         }
 
-        if (!$project->active_scene_id || !$project->activeScene) {
+        if (! $project->active_scene_id || ! $project->activeScene) {
             $errors[] = 'Project has no active scene';
         }
 
@@ -92,6 +92,26 @@ class StudioPayloadService
             'scene_count' => $scenes->count(),
             'layer_count' => $scenes->sum(fn (array $scene) => count($scene['layers'])),
             'scenes' => $scenes->all(),
+            'interactive_elements' => $project->interactiveElements->map(function ($element) {
+                return [
+                    'id' => $element->id,
+                    'scene_id' => $element->scene_id,
+                    'type' => $element->type,
+                    'name' => $element->name,
+                    'prompt' => $element->prompt,
+                    'status' => $element->status,
+                    'is_visible' => $element->is_visible,
+                    'settings' => $element->settings ?? [],
+                    'results' => $element->results ?? [],
+                ];
+            })->values()->all(),
+            'guest_room' => $project->guestRoom ? [
+                'id' => $project->guestRoom->id,
+                'slug' => $project->guestRoom->slug,
+                'status' => $project->guestRoom->status,
+                'max_guests' => $project->guestRoom->max_guests,
+                'active_sessions' => $project->guestRoom->sessions->where('connection_status', '!=', 'offline')->count(),
+            ] : null,
             'destinations' => $project->destinations->map(function ($destination) {
                 return [
                     'id' => $destination->id,
@@ -112,6 +132,8 @@ class StudioPayloadService
             'destinations',
             'scenes.layers.file',
             'activeScene.layers.file',
+            'interactiveElements',
+            'guestRoom.sessions',
         ]);
     }
 
@@ -120,9 +142,9 @@ class StudioPayloadService
         $errors = [];
 
         if (in_array($layer->type, ['video', 'audio', 'image'], true)) {
-            if (!$layer->file) {
+            if (! $layer->file) {
                 $errors[] = "Scene '{$scene->name}' has a {$layer->type} layer without an asset";
-            } elseif (!$layer->file->isReady()) {
+            } elseif (! $layer->file->isReady()) {
                 $errors[] = "Scene '{$scene->name}' has a {$layer->type} layer with an asset that is not ready";
             } elseif ($layer->file->type !== $layer->type) {
                 $errors[] = "Scene '{$scene->name}' has a {$layer->type} layer with a mismatched asset type";

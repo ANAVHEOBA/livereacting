@@ -14,7 +14,7 @@ class File extends Model
     protected $fillable = [
         'user_id', 'folder_id', 'name', 'type', 'source', 'source_url',
         'storage_path', 'size_bytes', 'duration_seconds', 'resolution',
-        'format', 'codec', 'status', 'encoding_progress', 'error_message', 'metadata'
+        'format', 'codec', 'status', 'encoding_progress', 'error_message', 'metadata',
     ];
 
     protected $casts = [
@@ -36,6 +36,11 @@ class File extends Model
     public function sceneLayers(): HasMany
     {
         return $this->hasMany(SceneLayer::class);
+    }
+
+    public function playlistItems(): HasMany
+    {
+        return $this->hasMany(PlaylistItem::class);
     }
 
     public function isReady(): bool
