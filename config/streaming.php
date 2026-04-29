@@ -13,6 +13,12 @@ return [
     'ffmpeg' => [
         'bin' => env('FFMPEG_BIN', '/opt/homebrew/bin/ffmpeg'),
         'ffprobe_bin' => env('FFPROBE_BIN', '/opt/homebrew/bin/ffprobe'),
+        'font_family' => env('FFMPEG_FONT_FAMILY', 'Sans'),
+        'preset' => env('FFMPEG_PRESET', 'veryfast'),
+        'video_bitrate' => env('FFMPEG_VIDEO_BITRATE', '4500k'),
+        'audio_bitrate' => env('FFMPEG_AUDIO_BITRATE', '128k'),
+        'fps' => (int) env('FFMPEG_FPS', 30),
+        'gop' => (int) env('FFMPEG_GOP', 60),
     ],
 
     'mediasoup' => [
@@ -36,5 +42,25 @@ return [
         'username' => env('TURN_USERNAME'),
         'credential' => env('TURN_CREDENTIAL'),
         'shared_secret' => env('TURN_SHARED_SECRET'),
+    ],
+
+    'integrations' => [
+        'frontend_redirect' => env('INTEGRATIONS_FRONTEND_REDIRECT', env('APP_URL', 'http://localhost:8000')),
+        'providers' => ['youtube', 'facebook', 'twitch', 'google_drive', 'dropbox', 'slack'],
+    ],
+
+    'providers' => [
+        'youtube' => [
+            'privacy_status' => env('YOUTUBE_LIVE_PRIVACY_STATUS', 'unlisted'),
+            'auto_start' => env('YOUTUBE_LIVE_AUTO_START', true),
+            'auto_stop' => env('YOUTUBE_LIVE_AUTO_STOP', true),
+        ],
+        'meta' => [
+            'status' => env('META_LIVE_STATUS', 'LIVE_NOW'),
+            'live_video_preset' => env('META_LIVE_VIDEO_PRESET'),
+        ],
+        'twitch' => [
+            'fallback_ingest_url' => env('TWITCH_FALLBACK_INGEST_URL', 'rtmp://live.twitch.tv/app/{stream_key}'),
+        ],
     ],
 ];

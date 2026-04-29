@@ -14,10 +14,12 @@ class DestinationResource extends JsonResource
             'type' => $this->type,
             'name' => $this->name,
             'platform_id' => $this->platform_id,
+            'connected_account_id' => $this->connected_account_id,
             'is_valid' => $this->is_valid,
             'needs_reconnection' => $this->needsReconnection(),
             'rtmp_url' => $this->type === 'rtmp' ? $this->rtmp_url : null,
             'token_expires_at' => $this->token_expires_at,
+            'metadata' => $this->metadata ?? [],
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

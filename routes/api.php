@@ -20,3 +20,6 @@ require __DIR__.'/../app/Modules/Guests/Routes/api.php';
 
 // Billing Module Routes
 require __DIR__.'/../app/Modules/Billing/Routes/api.php';
+
+// Integrations Module Routes
+require __DIR__.'/../app/Modules/Integrations/Routes/api.php';

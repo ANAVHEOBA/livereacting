@@ -77,4 +77,14 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(SceneTemplate::class);
     }
+
+    public function connectedAccounts(): HasMany
+    {
+        return $this->hasMany(ConnectedAccount::class);
+    }
+
+    public function streamingDestinations(): HasMany
+    {
+        return $this->hasMany(StreamingDestination::class);
+    }
 }

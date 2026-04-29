@@ -11,4 +11,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/destinations/{id}', [DestinationController::class, 'update']);
     Route::delete('/destinations/{id}', [DestinationController::class, 'destroy']);
     Route::post('/destinations/{id}/validate', [DestinationController::class, 'validate']);
+    Route::post('/destinations/{id}/probe', [DestinationController::class, 'probe']);
 });

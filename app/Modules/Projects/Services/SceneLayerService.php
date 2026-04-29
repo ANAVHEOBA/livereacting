@@ -146,12 +146,15 @@ class SceneLayerService
         $type = $data['type'] ?? $layer?->type;
         $fileId = array_key_exists('file_id', $data) ? $data['file_id'] : $layer?->file_id;
         $content = array_key_exists('content', $data) ? $data['content'] : $layer?->content;
-        $settings = array_key_exists('settings', $data) ? ($data['settings'] ?? []) : ($layer?->settings ?? []);
-        $position = array_key_exists('position', $data) ? ($data['position'] ?? []) : ($layer?->position ?? []);
+        $incomingSettings = array_key_exists('settings', $data) ? ($data['settings'] ?? []) : ($layer?->settings ?? []);
+        $incomingPosition = array_key_exists('position', $data) ? ($data['position'] ?? []) : ($layer?->position ?? []);
 
-        if (!$type) {
+        if (! $type) {
             throw new \Exception('Layer type is required');
         }
+
+        $settings = $this->normalizeSettings($type, $incomingSettings, $layer?->settings ?? []);
+        $position = $this->normalizePosition($type, $incomingPosition, $layer?->position ?? []);
 
         $this->validateLayerState($userId, $type, $fileId, $content, $settings);
 
@@ -163,8 +166,8 @@ class SceneLayerService
                 ?? $this->defaultLayerName($type, $fileId, $userId),
             'content' => $this->storesContent($type) ? $content : null,
             'is_visible' => $data['is_visible'] ?? $layer?->is_visible ?? true,
-            'position' => !empty($position) ? $position : ($layer?->position ?? $this->defaultPosition($type)),
-            'settings' => !empty($settings) ? $settings : ($layer?->settings ?? []),
+            'position' => ! empty($position) ? $position : ($layer?->position ?? $this->defaultPosition($type)),
+            'settings' => ! empty($settings) ? $settings : ($layer?->settings ?? []),
         ];
     }
 
@@ -173,17 +176,19 @@ class SceneLayerService
         if ($this->isFileBackedType($type)) {
             $file = $fileId ? $this->fileRepository->findByIdAndUser($fileId, $userId) : null;
 
-            if (!$file) {
+            if (! $file) {
                 throw new \Exception('Layer asset not found');
             }
 
-            if (!$file->isReady()) {
+            if (! $file->isReady()) {
                 throw new \Exception('Layer asset must be ready before it can be used in a scene');
             }
 
             if ($file->type !== $type) {
                 throw new \Exception("Layer asset type mismatch. Expected {$type} file");
             }
+
+            $this->validateVisualAndAudioSettings($type, $settings);
 
             return;
         }
@@ -194,6 +199,14 @@ class SceneLayerService
 
         if ($type === 'countdown' && blank($settings['ends_at'] ?? null)) {
             throw new \Exception('Countdown layers require settings.ends_at');
+        }
+
+        if ($type === 'countdown' && ! strtotime((string) $settings['ends_at'])) {
+            throw new \Exception('Countdown layers require a valid settings.ends_at timestamp');
+        }
+
+        if (in_array($type, ['text', 'overlay', 'countdown'], true)) {
+            $this->validateTextSettings($settings);
         }
     }
 
@@ -217,7 +230,7 @@ class SceneLayerService
             }
         }
 
-        return Str::headline($type) . ' Layer';
+        return Str::headline($type).' Layer';
     }
 
     protected function defaultPosition(string $type): array
@@ -228,5 +241,143 @@ class SceneLayerService
             'countdown' => ['x' => 1500, 'y' => 40, 'width' => 320, 'height' => 80],
             default => ['x' => 40, 'y' => 40, 'width' => 600, 'height' => 120],
         };
+    }
+
+    protected function normalizePosition(string $type, array $position, array $fallback): array
+    {
+        if ($type === 'audio') {
+            return [];
+        }
+
+        $base = array_merge($this->defaultPosition($type), $fallback, $position);
+
+        return [
+            'x' => (int) ($base['x'] ?? 0),
+            'y' => (int) ($base['y'] ?? 0),
+            'width' => max(1, (int) ($base['width'] ?? 1)),
+            'height' => max(1, (int) ($base['height'] ?? 1)),
+        ];
+    }
+
+    protected function normalizeSettings(string $type, array $settings, array $fallback): array
+    {
+        $base = array_merge($this->defaultSettings($type), $fallback, $settings);
+
+        return match ($type) {
+            'video', 'image' => [
+                'fit' => $base['fit'] ?? 'cover',
+                'opacity' => $this->normalizeRatio($base['opacity'] ?? 1),
+                'loop' => (bool) ($base['loop'] ?? true),
+                'muted' => (bool) ($base['muted'] ?? false),
+            ],
+            'audio' => [
+                'volume' => $this->normalizeVolume($base['volume'] ?? 1),
+                'loop' => (bool) ($base['loop'] ?? true),
+                'muted' => (bool) ($base['muted'] ?? false),
+            ],
+            'text', 'overlay', 'countdown' => [
+                'font_size' => max(12, (int) ($base['font_size'] ?? 52)),
+                'font_color' => (string) ($base['font_color'] ?? '#ffffff'),
+                'background_color' => $base['background_color'] ?? null,
+                'background_opacity' => $this->normalizeRatio($base['background_opacity'] ?? 0),
+                'align' => $base['align'] ?? 'left',
+                'vertical_align' => $base['vertical_align'] ?? 'top',
+                'padding' => max(0, (int) ($base['padding'] ?? 0)),
+                'font_family' => (string) ($base['font_family'] ?? config('streaming.ffmpeg.font_family', 'Sans')),
+                'line_spacing' => (int) ($base['line_spacing'] ?? 8),
+                'opacity' => $this->normalizeRatio($base['opacity'] ?? 1),
+                'ends_at' => $base['ends_at'] ?? null,
+            ],
+            default => $base,
+        };
+    }
+
+    protected function defaultSettings(string $type): array
+    {
+        return match ($type) {
+            'video', 'image' => [
+                'fit' => 'cover',
+                'opacity' => 1,
+                'loop' => true,
+                'muted' => false,
+            ],
+            'audio' => [
+                'volume' => 1,
+                'loop' => true,
+                'muted' => false,
+            ],
+            'overlay' => [
+                'font_size' => 44,
+                'font_color' => '#ffffff',
+                'background_color' => '#111827',
+                'background_opacity' => 0.6,
+                'align' => 'left',
+                'vertical_align' => 'top',
+                'padding' => 24,
+                'font_family' => config('streaming.ffmpeg.font_family', 'Sans'),
+                'line_spacing' => 8,
+                'opacity' => 1,
+            ],
+            'countdown' => [
+                'font_size' => 52,
+                'font_color' => '#ffffff',
+                'background_color' => '#111827',
+                'background_opacity' => 0.7,
+                'align' => 'center',
+                'vertical_align' => 'middle',
+                'padding' => 18,
+                'font_family' => config('streaming.ffmpeg.font_family', 'Sans'),
+                'line_spacing' => 6,
+                'opacity' => 1,
+            ],
+            default => [
+                'font_size' => 42,
+                'font_color' => '#ffffff',
+                'background_color' => null,
+                'background_opacity' => 0,
+                'align' => 'left',
+                'vertical_align' => 'top',
+                'padding' => 0,
+                'font_family' => config('streaming.ffmpeg.font_family', 'Sans'),
+                'line_spacing' => 8,
+                'opacity' => 1,
+            ],
+        };
+    }
+
+    protected function validateVisualAndAudioSettings(string $type, array $settings): void
+    {
+        if (in_array($type, ['video', 'image'], true) && ! in_array($settings['fit'] ?? 'cover', ['contain', 'cover', 'stretch'], true)) {
+            throw new \Exception('Visual layers require settings.fit to be contain, cover, or stretch');
+        }
+
+        if (in_array($type, ['video', 'image'], true) && (($settings['opacity'] ?? 1) < 0 || ($settings['opacity'] ?? 1) > 1)) {
+            throw new \Exception('Visual layer opacity must be between 0 and 1');
+        }
+
+        if ($type === 'audio' && (($settings['volume'] ?? 1) < 0 || ($settings['volume'] ?? 1) > 4)) {
+            throw new \Exception('Audio layer volume must be between 0 and 4');
+        }
+    }
+
+    protected function validateTextSettings(array $settings): void
+    {
+        if (! in_array($settings['align'] ?? 'left', ['left', 'center', 'right'], true)) {
+            throw new \Exception('Text alignment must be left, center, or right');
+        }
+
+        if (! in_array($settings['vertical_align'] ?? 'top', ['top', 'middle', 'bottom'], true)) {
+            throw new \Exception('Vertical alignment must be top, middle, or bottom');
+        }
+    }
+
+    protected function normalizeRatio(mixed $value): float
+    {
+        return max(0, min(1, (float) $value));
+    }
+
+    protected function normalizeVolume(mixed $value): float
+    {
+        return max(0, min(4, (float) $value));
     }
 }

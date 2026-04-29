@@ -51,12 +51,18 @@ class HomeController extends Controller
                     'description' => 'FFmpeg egress plus mediasoup guest ingress with TURN-aware signaling payloads.',
                     'status' => 'Live',
                 ],
+                [
+                    'name' => 'Provider Integrations',
+                    'description' => 'Google Drive, YouTube, Twitch, Meta/Facebook, Dropbox, and Slack wired through provider OAuth and token storage.',
+                    'status' => 'Live',
+                ],
             ],
             'plans' => SubscriptionPlanResource::collection($this->billingService->getPlans()),
             'studioConfig' => $studioConfig,
             'checklist' => [
                 'Mediasoup guest signaling server included under server/mediasoup',
                 'Laravel APIs cover projects, scenes, videos, destinations, interactives, guests, billing, and studio config',
+                'OAuth-backed provider integrations cover Google Drive, YouTube, Twitch, Meta/Facebook, Dropbox, and Slack',
                 'Feature tests cover the new product flows end to end',
             ],
         ]);

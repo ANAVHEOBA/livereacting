@@ -53,11 +53,11 @@ class FileImportService
             'format' => null,
             'codec' => null,
             'status' => 'importing',
-            'metadata' => [
+            'metadata' => array_merge([
                 'provider' => $fileSource,
                 'transcode_profile' => $this->transcodeProfileFor($fileType),
                 'requested_metadata' => $data['metadata'] ?? [],
-            ],
+            ], $data['metadata'] ?? []),
         ]);
 
         // Link import to file

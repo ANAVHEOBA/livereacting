@@ -15,7 +15,9 @@ class LiveStreamService
         protected ProjectRepository $projectRepository,
         protected HistoryService $historyService,
         protected StudioPayloadService $studioPayloadService,
-        protected BillingService $billingService
+        protected BillingService $billingService,
+        protected LiveDestinationProvisioningService $liveDestinationProvisioningService,
+        protected StreamWorkerService $streamWorkerService
     ) {}
 
     public function validateProject(Project $project): array
@@ -86,17 +88,43 @@ class LiveStreamService
             ],
         ]);
 
-        // Update project status and active_live_id
-        $this->projectRepository->update($project, [
-            'status' => 'live',
-            'active_live_id' => $liveStream->id,
-        ]);
+        try {
+            $destinationRuntime = $this->liveDestinationProvisioningService->provision(
+                $project,
+                $liveStream,
+                $data
+            );
 
-        // Simulate stream starting (in real app, this would call streaming service)
-        $this->liveStreamRepository->update($liveStream, [
-            'status' => 'live',
-            'started_at' => now(),
-        ]);
+            $this->liveStreamRepository->update($liveStream, [
+                'metadata' => array_merge($liveStream->metadata ?? [], [
+                    'destination_sessions' => $destinationRuntime['sessions'],
+                    'egress' => $destinationRuntime['egress'],
+                ]),
+            ]);
+
+            $worker = $this->streamWorkerService->start($liveStream->fresh());
+
+            // Update project status and active_live_id
+            $this->projectRepository->update($project, [
+                'status' => 'live',
+                'active_live_id' => $liveStream->id,
+            ]);
+
+            $this->liveStreamRepository->update($liveStream, [
+                'status' => 'live',
+                'started_at' => now(),
+                'metadata' => array_merge($liveStream->fresh()->metadata ?? [], [
+                    'worker' => $worker,
+                ]),
+            ]);
+        } catch (\Throwable $e) {
+            $this->liveStreamRepository->update($liveStream, [
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
 
         // Log history
         $this->historyService->logAction(
@@ -119,7 +147,10 @@ class LiveStreamService
             'Live stream started',
             'live_stream',
             $liveStream->id,
-            ['format' => $liveStream->format]
+            [
+                'format' => $liveStream->format,
+                'destination_count' => count($destinationRuntime['sessions']),
+            ]
         );
 
         return $liveStream->fresh();
@@ -137,10 +168,26 @@ class LiveStreamService
             throw new \Exception('Live stream cannot be stopped in current state');
         }
 
+        $worker = $this->streamWorkerService->stop($liveStream);
+
+        $destinationFinalization = $this->liveDestinationProvisioningService->finalize($liveStream);
+        $hasProvisioningErrors = collect($destinationFinalization)
+            ->contains(fn (array $result): bool => ($result['status'] ?? null) === 'error');
+
+        $metadata = array_merge($liveStream->metadata ?? [], [
+            'worker' => $worker,
+            'destination_finalization' => $destinationFinalization,
+            'stopped_at' => now()->toIso8601String(),
+        ]);
+
         // Update live stream status
         $this->liveStreamRepository->update($liveStream, [
-            'status' => 'stopped',
+            'status' => $hasProvisioningErrors ? 'failed' : 'stopped',
             'ended_at' => now(),
+            'metadata' => $metadata,
+            'error_message' => $hasProvisioningErrors
+                ? 'One or more destination sessions failed to finalize'
+                : null,
         ]);
 
         // Update project status
@@ -159,6 +206,7 @@ class LiveStreamService
                 'duration_seconds' => $liveStream->started_at
                     ? now()->diffInSeconds($liveStream->started_at)
                     : null,
+                'destination_finalization' => $destinationFinalization,
             ]
         );
 

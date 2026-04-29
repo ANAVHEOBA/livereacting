@@ -27,6 +27,7 @@ class DestinationService
     {
         $destination = $this->destinationRepository->create([
             'user_id' => $userId,
+            'connected_account_id' => $data['connected_account_id'] ?? null,
             'type' => $data['type'],
             'name' => $data['name'],
             'platform_id' => $data['platform_id'] ?? null,
@@ -37,6 +38,7 @@ class DestinationService
             'token_expires_at' => isset($data['token_expires_at'])
                 ? Carbon::parse($data['token_expires_at'])
                 : null,
+            'metadata' => $data['metadata'] ?? null,
             'is_valid' => false,
         ]);
 
@@ -47,7 +49,7 @@ class DestinationService
     {
         $payload = [];
 
-        foreach (['name', 'platform_id', 'access_token', 'refresh_token', 'rtmp_url', 'stream_key'] as $field) {
+        foreach (['name', 'platform_id', 'access_token', 'refresh_token', 'rtmp_url', 'stream_key', 'connected_account_id', 'metadata'] as $field) {
             if (array_key_exists($field, $data)) {
                 $payload[$field] = $data[$field];
             }
@@ -59,7 +61,7 @@ class DestinationService
                 : null;
         }
 
-        if (!empty($payload)) {
+        if (! empty($payload)) {
             $this->destinationRepository->update($destination, $payload);
         }
 

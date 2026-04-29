@@ -5,36 +5,33 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class StreamingDestination extends Model
+class ConnectedAccount extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'user_id',
-        'connected_account_id',
-        'type',
+        'provider',
+        'external_id',
         'name',
-        'platform_id',
+        'email',
         'access_token',
         'refresh_token',
-        'rtmp_url',
-        'stream_key',
-        'is_valid',
         'token_expires_at',
+        'scopes',
         'metadata',
     ];
 
     protected $hidden = [
         'access_token',
         'refresh_token',
-        'stream_key',
     ];
 
     protected $casts = [
-        'is_valid' => 'boolean',
         'token_expires_at' => 'datetime',
+        'scopes' => 'array',
         'metadata' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -45,27 +42,17 @@ class StreamingDestination extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function projects(): BelongsToMany
+    public function destinations(): HasMany
     {
-        return $this->belongsToMany(Project::class, 'project_destinations');
+        return $this->hasMany(StreamingDestination::class);
     }
 
-    public function connectedAccount(): BelongsTo
-    {
-        return $this->belongsTo(ConnectedAccount::class);
-    }
-
-    public function isTokenExpired(): bool
+    public function isExpired(): bool
     {
         if (! $this->token_expires_at) {
             return false;
         }
 
         return $this->token_expires_at->isPast();
-    }
-
-    public function needsReconnection(): bool
-    {
-        return ! $this->is_valid || $this->isTokenExpired();
     }
 }

@@ -9,11 +9,13 @@ use App\Modules\Projects\Controllers\SceneLayerController;
 use App\Modules\Projects\Controllers\SceneTemplateController;
 use App\Modules\Projects\Controllers\ScheduleController;
 use App\Modules\Projects\Controllers\StudioConfigController;
+use App\Modules\Projects\Controllers\StudioHealthController;
 use Illuminate\Support\Facades\Route;
 
 // Protected routes - require authentication
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/studio/config', [StudioConfigController::class, 'show']);
+    Route::get('/studio/health', [StudioHealthController::class, 'show']);
     Route::get('/projects', [ProjectController::class, 'index']);
     Route::post('/projects', [ProjectController::class, 'store']);
     Route::get('/projects/{id}', [ProjectController::class, 'show']);

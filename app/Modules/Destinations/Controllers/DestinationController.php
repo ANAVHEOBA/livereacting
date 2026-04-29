@@ -7,6 +7,7 @@ use App\Modules\Destinations\Requests\CreateDestinationRequest;
 use App\Modules\Destinations\Requests\UpdateDestinationRequest;
 use App\Modules\Destinations\Resources\DestinationResource;
 use App\Modules\Destinations\Services\DestinationService;
+use App\Modules\Integrations\Services\ProviderValidationService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,8 @@ class DestinationController extends Controller
     use ApiResponse;
 
     public function __construct(
-        protected DestinationService $destinationService
+        protected DestinationService $destinationService,
+        protected ProviderValidationService $providerValidationService
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -38,7 +40,7 @@ class DestinationController extends Controller
     {
         $destination = $this->destinationService->getDestination($id, $request->user()->id);
 
-        if (!$destination) {
+        if (! $destination) {
             return $this->error('Destination not found', 404);
         }
 
@@ -67,7 +69,7 @@ class DestinationController extends Controller
     {
         $destination = $this->destinationService->getDestination($id, $request->user()->id);
 
-        if (!$destination) {
+        if (! $destination) {
             return $this->error('Destination not found', 404);
         }
 
@@ -87,7 +89,7 @@ class DestinationController extends Controller
     {
         $destination = $this->destinationService->getDestination($id, $request->user()->id);
 
-        if (!$destination) {
+        if (! $destination) {
             return $this->error('Destination not found', 404);
         }
 
@@ -104,13 +106,13 @@ class DestinationController extends Controller
     {
         $destination = $this->destinationService->getDestination($id, $request->user()->id);
 
-        if (!$destination) {
+        if (! $destination) {
             return $this->error('Destination not found', 404);
         }
 
         $validation = $this->destinationService->validateDestination($destination);
 
-        if (!$validation['valid']) {
+        if (! $validation['valid']) {
             return $this->error('Destination validation failed', 400, $validation['errors']);
         }
 
@@ -118,5 +120,23 @@ class DestinationController extends Controller
             'valid' => true,
             'destination' => new DestinationResource($validation['destination']),
         ], 'Destination is valid');
+    }
+
+    public function probe(Request $request, int $id): JsonResponse
+    {
+        $destination = $this->destinationService->getDestination($id, $request->user()->id);
+
+        if (! $destination) {
+            return $this->error('Destination not found', 404);
+        }
+
+        try {
+            return $this->success(
+                $this->providerValidationService->validateDestination($destination),
+                'Destination probe completed successfully'
+            );
+        } catch (\Throwable $e) {
+            return $this->error($e->getMessage(), 400);
+        }
     }
 }

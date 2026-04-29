@@ -39,6 +39,10 @@ class StreamConfigService
                 'playlist_enabled' => true,
                 'scene_templates_enabled' => true,
             ],
+            'integrations' => [
+                'providers' => config('streaming.integrations.providers'),
+                'frontend_redirect' => config('streaming.integrations.frontend_redirect'),
+            ],
         ];
     }
 }
